@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="奥数题库">
+    <title>奥数七大模块题库系统</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233b82f6'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>📚</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { overscroll-behavior: none; }
+        .module-card { transition: all 0.3s ease; }
+        .module-card:active { transform: scale(0.97); }
+        .question-item { transition: all 0.2s ease; }
+        .question-item:active { background-color: #f0f4ff; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 py-6 pb-20">
+        <!-- 顶部标题 -->
+        <header class="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl p-5 mb-5 shadow-lg">
+            <h1 class="text-2xl font-bold mb-1">📚 奥数七大模块题库</h1>
+            <p class="text-blue-100 text-sm">分类管理 · 快速检索 · 本地存储</p>
+        </header>
+
+        <!-- 搜索与操作栏 -->
+        <div class="bg-white rounded-xl shadow-sm p-3 mb-5">
+            <div class="flex gap-2 flex-wrap items-center">
+                <div class="flex-1 min-w-[150px]">
+                    <input type="text" id="searchInput" placeholder="🔍 搜索题目..." 
+                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                </div>
+                <select id="filterModule" class="px-2 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="all">全部模块</option>
+                    <option value="计算">计算</option>
+                    <option value="数论">数论</option>
+                    <option value="几何">几何</option>
+                    <option value="行程">行程</option>
+                    <option value="应用题">应用题</option>
+                    <option value="计数">计数</option>
+                    <option value="综合">综合</option>
+                </select>
+                <button onclick="openAddModal()" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium">
+                    ➕ 录入
+                </button>
+            </div>
+            <div class="flex gap-2 mt-2 flex-wrap">
+                <button onclick="exportToJSON()" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs">📤 备份</button>
+                <button onclick="exportToWord()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs">📄 带解析</button>
+                <button onclick="exportToWordOnlyQuestions()" class="bg-violet-600 text-white px-3 py-1.5 rounded-lg text-xs">📝 纯题目</button>
+                <label class="bg-gray-600 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer">
+                    📥 导入
+                    <input type="file" accept=".json" onchange="importFromJSON(event)" class="hidden">
+                </label>
+            </div>
+        </div>
+
+        <!-- 七大模块卡片 -->
+        <div class="grid grid-cols-4 gap-2 mb-5">
+            <div class="module-card bg-red-50 border border-red-200 rounded-xl p-3 text-center cursor-pointer" onclick="filterByModule('计算')">
+                <div class="text-xl mb-1">🧮</div>
+                <div class="font-bold text-red-700 text-xs">计算</div>
+                <div class="text-xs text-red-500"><span id="count-计算">0</span>题</div>
+            </div>
+            <div class="module-card bg-orange-50 border border-orange-200 rounded-xl p-3 text-center cursor-pointer" onclick="filterByModule('数论')">
+                <div class="text-xl mb-1">🔢</div>
+                <div class="font-bold text-orange-700 text-xs">数论</div>
+                <div class="text-xs text-orange-500"><span id="count-数论">0</span>题</div>
+            </div>
+            <div class="module-card bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center cursor-pointer" onclick="filterByModule('几何')">
+                <div class="text-xl mb-1">📐</div>
+                <div class="font-bold text-yellow-700 text-xs">几何</div>
+                <div class="text-xs text-yellow-500"><span id="count-几何">0</span>题</div>
+            </div>
+            <div class="module-card bg-blue-50 border border-blue-200 rounded-xl p-3 text-center cursor-pointer" onclick="filterByModule('行程')">
+                <div class="text-xl mb-1">🚄</div>
+                <div class="font-bold text-blue-700 text-xs">行程</div>
+                <div class="text-xs text-blue-500"><span id="count-行程">0</span>题</div>
+            </div>
+            <div class="module-card bg-amber-50 border border-amber-200 rounded-xl p-3 text-center cursor-pointer" onclick="filterByModule('应用题')">
+                <div class="text-xl mb-1">📝</div>
+                <div class="font-bold text-amber-700 text-xs">应用题</div>
+                <div class="text-xs text-amber-500"><span id="count-应用题">0</span>题</div>
+            </div>
+            <div class="module-card bg-purple-50 border border-purple-200 rounded-xl p-3 text-center cursor-pointer" onclick="filterByModule('计数')">
+                <div class="text-xl mb-1">🎯</div>
+                <div class="font-bold text-purple-700 text-xs">计数</div>
+                <div class="text-xs text-purple-500"><span id="count-计数">0</span>题</div>
+            </div>
+            <div class="module-card bg-gray-50 border border-gray-300 rounded-xl p-3 text-center cursor-pointer" onclick="filterByModule('综合')">
+                <div class="text-xl mb-1">🧠</div>
+                <div class="font-bold text-gray-700 text-xs">综合</div>
+                <div class="text-xs text-gray-500"><span id="count-综合">0</span>题</div>
+            </div>
+            <div class="module-card bg-white border border-gray-200 rounded-xl p-3 text-center cursor-pointer" onclick="filterByModule('all');document.getElementById('filterModule').value='all'">
+                <div class="text-xl mb-1">📋</div>
+                <div class="font-bold text-gray-700 text-xs">全部</div>
+                <div class="text-xs text-gray-500"><span id="totalCount">0</span>题</div>
+            </div>
+        </div>
+
+        <!-- 题目列表区 -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="border-b border-gray-100 px-4 py-2.5 flex justify-between items-center bg-gray-50">
+                <div class="font-semibold text-gray-700 text-sm">题目列表</div>
+                <div class="text-xs text-gray-500">
+                    筛选：<span id="currentFilter" class="font-medium text-blue-600">全部</span>
+                </div>
+            </div>
+            
+            <div id="questionList" class="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+                <!-- 题目列表动态生成 -->
+            </div>
+            
+            <div id="emptyState" class="py-16 text-center text-gray-400 hidden">
+                <div class="text-4xl mb-2">📭</div>
+                <p class="text-sm">暂无题目，点击「录入」开始添加</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 录入题目弹窗 -->
+    <div id="addModal" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-xl max-h-[90vh] overflow-y-auto fade-in">
+            <div class="sticky top-0 bg-white border-b border-gray-100 px-5 py-3 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-gray-800">📝 录入新题目</h2>
+                <button onclick="closeAddModal()" class="text-gray-400 text-xl">&times;</button>
+            </div>
+            
+            <div class="p-5 space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">所属模块 <span class="text-red-500">*</span></label>
+                    <select id="inputModule" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                        <option value="">请选择模块</option>
+                        <option value="计算">一、计算</option>
+                        <option value="数论">二、数论</option>
+                        <option value="几何">三、几何</option>
+                        <option value="行程">四、行程</option>
+                        <option value="应用题">五、应用题</option>
+                        <option value="计数">六、计数</option>
+                        <option value="综合">七、综合</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">知识点标签</label>
+                    <input type="text" id="inputTag" placeholder="如：等差数列、牛吃草" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">难度等级</label>
+                    <div class="flex gap-4 text-sm">
+                        <label class="flex items-center gap-1"><input type="radio" name="difficulty" value="简单" checked>⭐ 简单</label>
+                        <label class="flex items-center gap-1"><input type="radio" name="difficulty" value="中等">⭐⭐ 中等</label>
+                        <label class="flex items-center gap-1"><input type="radio" name="difficulty" value="困难">⭐⭐⭐ 困难</label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">题目内容 <span class="text-red-500">*</span></label>
+                    <textarea id="inputQuestion" rows="3" placeholder="请输入题目正文..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">答案/解析</label>
+                    <textarea id="inputAnswer" rows="2" placeholder="可选，填写解题过程..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none"></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="closeAddModal()" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-600">取消</button>
+                    <button onclick="saveQuestion()" class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium">✅ 保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 题目详情弹窗 -->
+    <div id="detailModal" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto fade-in">
+            <div class="border-b border-gray-100 px-5 py-3 flex justify-between items-center">
+                <div>
+                    <span id="detailModule" class="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700"></span>
+                    <span id="detailDifficulty" class="text-xs ml-1"></span>
+                </div>
+                <button onclick="closeDetailModal()" class="text-gray-400 text-xl">&times;</button>
+            </div>
+            <div class="p-5">
+                <div class="text-xs text-gray-400 mb-2" id="detailTag"></div>
+                <div class="text-gray-800 leading-relaxed mb-5" id="detailQuestion"></div>
+                <div class="border-t pt-3">
+                    <div class="text-xs text-gray-500 mb-2">💡 答案与解析</div>
+                    <div class="text-gray-700 bg-green-50 p-3 rounded-lg text-sm" id="detailAnswer">暂无解析</div>
+                </div>
+                <div class="flex gap-3 mt-5">
+                    <button onclick="deleteCurrentQuestion()" class="px-4 py-2 text-red-500 text-sm">🗑️ 删除</button>
+                    <button onclick="closeDetailModal()" class="flex-1 px-4 py-2 bg-gray-100 rounded-lg text-sm">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 注册PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+        }
+
+        let questions = JSON.parse(localStorage.getItem('mathQuestionBank') || '[]');
+        let currentDetailId = null;
+
+        const moduleColors = {
+            '计算': { bg: 'bg-red-50', text: 'text-red-600' },
+            '数论': { bg: 'bg-orange-50', text: 'text-orange-600' },
+            '几何': { bg: 'bg-yellow-50', text: 'text-yellow-600' },
+            '行程': { bg: 'bg-blue-50', text: 'text-blue-600' },
+            '应用题': { bg: 'bg-amber-50', text: 'text-amber-600' },
+            '计数': { bg: 'bg-purple-50', text: 'text-purple-600' },
+            '综合': { bg: 'bg-gray-50', text: 'text-gray-600' }
+        };
+
+        const difficultyStars = { '简单': '⭐', '中等': '⭐⭐', '困难': '⭐⭐⭐' };
+
+        function init() {
+            renderQuestionList();
+            updateModuleCounts();
+            document.getElementById('searchInput').addEventListener('input', renderQuestionList);
+            document.getElementById('filterModule').addEventListener('change', renderQuestionList);
+        }
+
+        function updateModuleCounts() {
+            const counts = { '计算': 0, '数论': 0, '几何': 0, '行程': 0, '应用题': 0, '计数': 0, '综合': 0 };
+            questions.forEach(q => { if(counts.hasOwnProperty(q.module)) counts[q.module]++; });
+            Object.keys(counts).forEach(m => document.getElementById('count-'+m).textContent = counts[m]);
+            document.getElementById('totalCount').textContent = questions.length;
+        }
+
+        function filterByModule(module) {
+            document.getElementById('filterModule').value = module;
+            renderQuestionList();
+        }
+
+        function renderQuestionList() {
+            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            const moduleFilter = document.getElementById('filterModule').value;
+            
+            let filtered = questions.filter(q => {
+                const mk = !keyword || q.question.toLowerCase().includes(keyword) || (q.tag && q.tag.toLowerCase().includes(keyword));
+                const mm = moduleFilter === 'all' || q.module === moduleFilter;
+                return mk && mm;
+            });
+
+            let ft = [];
+            if(moduleFilter !== 'all') ft.push(moduleFilter);
+            if(keyword) ft.push('关键词:'+keyword);
+            document.getElementById('currentFilter').textContent = ft.length ? ft.join('·') : '全部';
+
+            const listEl = document.getElementById('questionList');
+            const emptyEl = document.getElementById('emptyState');
+
+            if(filtered.length === 0) {
+                listEl.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+            emptyEl.classList.add('hidden');
+            listEl.innerHTML = filtered.map(q => {
+                const c = moduleColors[q.module] || moduleColors['综合'];
+                return `
+                <div class="question-item px-4 py-3 cursor-pointer" onclick="showDetail(${q.id})">
+                    <div class="flex items-start gap-2">
+                        <span class="text-xs px-1.5 py-0.5 rounded ${c.bg} ${c.text} whitespace-nowrap mt-0.5">${q.module}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-gray-800 text-sm line-clamp-2">${escapeHtml(q.question)}</div>
+                            <div class="text-xs text-gray-400 mt-1">${difficultyStars[q.difficulty]||''} ${q.tag ? '🏷️'+escapeHtml(q.tag) : ''}</div>
+                        </div>
+                        <span class="text-gray-300">›</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function openAddModal() {
+            document.getElementById('addModal').classList.remove('hidden');
+            document.getElementById('inputModule').value = '';
+            document.getElementById('inputTag').value = '';
+            document.getElementById('inputQuestion').value = '';
+            document.getElementById('inputAnswer').value = '';
+            document.querySelector('input[name="difficulty"][value="简单"]').checked = true;
+        }
+        function closeAddModal() { document.getElementById('addModal').classList.add('hidden'); }
+
+        function saveQuestion() {
+            const module = document.getElementById('inputModule').value;
+            const question = document.getElementById('inputQuestion').value.trim();
+            const tag = document.getElementById('inputTag').value.trim();
+            const answer = document.getElementById('inputAnswer').value.trim();
+            const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+
+            if(!module) { alert('请选择所属模块'); return; }
+            if(!question) { alert('请输入题目内容'); return; }
+
+            questions.unshift({
+                id: Date.now(), module, tag, difficulty, question, answer,
+                createTime: new Date().toISOString()
+            });
+            localStorage.setItem('mathQuestionBank', JSON.stringify(questions));
+            closeAddModal();
+            renderQuestionList();
+            updateModuleCounts();
+        }
+
+        function showDetail(id) {
+            const q = questions.find(item => item.id === id);
+            if(!q) return;
+            currentDetailId = id;
+            document.getElementById('detailModule').textContent = q.module;
+            document.getElementById('detailDifficulty').textContent = difficultyStars[q.difficulty];
+            document.getElementById('detailTag').textContent = q.tag ? '🏷️ ' + q.tag : '';
+            document.getElementById('detailQuestion').textContent = q.question;
+            document.getElementById('detailAnswer').textContent = q.answer || '暂无解析';
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+        function closeDetailModal() { document.getElementById('detailModal').classList.add('hidden'); currentDetailId = null; }
+
+        function deleteCurrentQuestion() {
+            if(!currentDetailId) return;
+            if(!confirm('确定删除这道题？')) return;
+            questions = questions.filter(q => q.id !== currentDetailId);
+            localStorage.setItem('mathQuestionBank', JSON.stringify(questions));
+            closeDetailModal();
+            renderQuestionList();
+            updateModuleCounts();
+        }
+
+        // 导出功能
+        function exportToJSON() {
+            const blob = new Blob([JSON.stringify(questions, null, 2)], {type: 'application/json'});
+            downloadFile(blob, `奥数题库备份_${dateStr()}.json`);
+        }
+
+        function exportToWord() {
+            const modules = ['计算','数论','几何','行程','应用题','计数','综合'];
+            let html = `<html><head><meta charset='utf-8'><style>
+                body{font-family:宋体;font-size:12pt;line-height:1.8}
+                h1{text-align:center}h2{color:#2b579a;border-bottom:1px solid #2b579a}
+                .answer{margin-left:20px;background:#f5f5f5;padding:8px;border-left:3px solid #4caf50}
+            </style></head><body><h1>奥数七大模块题库</h1><p style='text-align:center;color:#666'>共${questions.length}题</p>`;
+            modules.forEach(m => {
+                const mq = questions.filter(q => q.module === m);
+                if(mq.length === 0) return;
+                html += `<h2>【${m}模块】共${mq.length}题</h2>`;
+                mq.forEach((q,i) => {
+                    html += `<p><b>第${i+1}题</b> [${q.difficulty}] ${q.tag||''}<br>${q.question.replace(/\n/g,'<br>')}</p>`;
+                    if(q.answer) html += `<div class='answer'><b>解析：</b>${q.answer.replace(/\n/g,'<br>')}</div>`;
+                });
+            });
+            html += `</body></html>`;
+            const blob = new Blob(['\ufeff', html], {type: 'application/msword'});
+            downloadFile(blob, `奥数题库_带解析_${dateStr()}.doc`);
+        }
+
+        function exportToWordOnlyQuestions() {
+            const modules = ['计算','数论','几何','行程','应用题','计数','综合'];
+            let html = `<html><head><meta charset='utf-8'><style>
+                body{font-family:宋体;font-size:12pt;line-height:1.8}
+                h1{text-align:center}h2{color:#2b579a;border-bottom:1px solid #2b579a}
+                .q-line{border-bottom:1px dashed #ccc;height:30px;margin:15px 0}
+            </style></head><body><h1>奥数练习题</h1><p style='text-align:center;color:#666'>共${questions.length}题</p>`;
+            modules.forEach(m => {
+                const mq = questions.filter(q => q.module === m);
+                if(mq.length === 0) return;
+                html += `<h2>【${m}模块】</h2>`;
+                mq.forEach((q,i) => {
+                    html += `<p><b>${i+1}.</b> [${q.difficulty}] ${q.tag||''}<br>${q.question.replace(/\n/g,'<br>')}</p><div class='q-line'></div>`;
+                });
+            });
+            html += `</body></html>`;
+            const blob = new Blob(['\ufeff', html], {type: 'application/msword'});
+            downloadFile(blob, `奥数练习题_纯题目_${dateStr()}.doc`);
+        }
+
+        function importFromJSON(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if(!Array.isArray(imported)) { alert('文件格式错误'); return; }
+                    if(confirm(`检测到${imported.length}道题\n确定=合并 取消=覆盖`)) {
+                        const ids = new Set(questions.map(q=>q.id));
+                        const add = imported.filter(q=>!ids.has(q.id));
+                        questions = [...add, ...questions];
+                        alert(`新增${add.length}道题`);
+                    } else {
+                        questions = imported;
+                        alert(`已覆盖，共${imported.length}道题`);
+                    }
+                    localStorage.setItem('mathQuestionBank', JSON.stringify(questions));
+                    renderQuestionList();
+                    updateModuleCounts();
+                } catch(err) { alert('导入失败'); }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function dateStr() { return new Date().toLocaleDateString().replace(/\//g,'-'); }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 点击弹窗外部关闭
+        document.getElementById('addModal').addEventListener('click', e => { if(e.target===this) closeAddModal(); });
+        document.getElementById('detailModal').addEventListener('click', e => { if(e.target===this) closeDetailModal(); });
+
+        init();
+
+        // 预置示例题
+        if(questions.length === 0) {
+            questions = [
+                { id: 1, module: '计算', tag: '等差数列', difficulty: '中等', 
+                  question: '计算：1+2+3+4+…+99+100 的和是多少？',
+                  answer: '等差数列求和：和=(首项+末项)×项数÷2 = (1+100)×100÷2 = 5050' },
+                { id: 2, module: '数论', tag: '质数合数', difficulty: '简单',
+                  question: '20以内的所有质数之和是多少？',
+                  answer: '20以内质数：2,3,5,7,11,13,17,19，和为 77' },
+                { id: 3, module: '几何', tag: '三角形面积', difficulty: '中等',
+                  question: '直角三角形两条直角边为6cm和8cm，求斜边上的高。',
+                  answer: '斜边=10cm，面积=24cm²，高=24×2÷10=4.8cm' },
+                { id: 4, module: '行程', tag: '相遇问题', difficulty: '中等',
+                  question: '甲乙两地相距360km，甲车60km/h，乙车40km/h，相向而行几小时相遇？',
+                  answer: '相遇时间=360÷(60+40)=3.6小时' },
+                { id: 5, module: '应用题', tag: '牛吃草', difficulty: '困难',
+                  question: '一片牧场，24头牛6天吃完，21头牛8天吃完。16头牛几天吃完？',
+                  answer: '每天新长草12份，原有草72份，16头牛可吃18天' },
+                { id: 6, module: '计数', tag: '排列组合', difficulty: '中等',
+                  question: '从5人中选3人排成一排，有多少种排法？',
+                  answer: 'A(5,3) = 5×4×3 = 60种' },
+                { id: 7, module: '综合', tag: '逻辑推理', difficulty: '困难',
+                  question: '甲乙丙丁四人一人做了好事。甲：不是我。乙：是丙。丙：是丁。丁：丙胡说。只有一人说假话，谁做了好事？',
+                  answer: '丙和丁矛盾，乙说真话，所以是丙做的。' }
+            ];
+            localStorage.setItem('mathQuestionBank', JSON.stringify(questions));
+            renderQuestionList();
+            updateModuleCounts();
+        }
+    </script>
+</body>
+</html>
